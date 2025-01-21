@@ -54,8 +54,8 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
+          service: wordpress-service
+          cluster: wordpress-cluster
           wait-for-service-stability: true
 
       - name: Collect status
