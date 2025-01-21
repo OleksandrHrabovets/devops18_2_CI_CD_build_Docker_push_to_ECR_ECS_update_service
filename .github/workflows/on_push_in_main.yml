@@ -37,15 +37,11 @@ jobs:
           docker push ${{ secrets.ECR_REPOSITORY }}:${{ secrets.ECR_TAG }}
           echo "image=${{ secrets.ECR_REPOSITORY }}:${{ secrets.ECR_TAG }}" >> $GITHUB_OUTPUT
 
-      - name: Download task definition
-        run: |
-          aws ecs describe-task-definition - task-definition ${{ secrets.ECR_TASK_DEFINITION }} - query taskDefinition > task-definition.json
-
-      - name: Fill in new image ID in task definition
+      - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
         with:
-          task-definition: task-definition.json
+          task-definition: ${{ secrets.ECS_TASK_DEFINITION }}
           container-name: ${{ secrets.CONTAINER_NAME }}
           image: ${{ steps.push.outputs.image }}
 
@@ -59,6 +55,7 @@ jobs:
           wait-for-service-stability: true
 
       - name: Collect status
+        if: always()
         id: collect_status
         run: |
           echo "BUID_STATUS=$([[ '${{ steps.build.outcome }}' == 'success' ]] && echo '✅ Success' || echo '❌ Failed')" >> $GITHUB_ENV        
