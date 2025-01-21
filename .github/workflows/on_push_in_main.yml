@@ -35,7 +35,7 @@ jobs:
         id: push
         run: |
           docker push ${{ secrets.ECR_REPOSITORY }}:${{ secrets.ECR_TAG }}
-          echo "image=${{ secrets.ECR_REPOSITORY }}:${{ secrets.ECR_TAG }} >> $GITHUB_OUTPUT
+          echo "image=${{ secrets.ECR_REPOSITORY }}:${{ secrets.ECR_TAG }}" >> $GITHUB_OUTPUT
 
       - name: Download task definition
         run: |
