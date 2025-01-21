@@ -35,6 +35,28 @@ jobs:
         id: push
         run: |
           docker push ${{ secrets.ECR_REPOSITORY }}:${{ secrets.ECR_TAG }}
+          echo "image=${{ secrets.ECR_REPOSITORY }}:${{ secrets.ECR_TAG }} >> $GITHUB_OUTPUT
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition - task-definition ${{ secrets.ECR_TASK_DEFINITION }} - query taskDefinition > task-definition.json
+
+      - name: Fill in new image ID in task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ secrets.CONTAINER_NAME }}
+          image: ${{ steps.push.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        id: deploy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
 
       - name: Collect status
         id: collect_status
@@ -42,6 +64,8 @@ jobs:
           echo "BUID_STATUS=$([[ '${{ steps.build.outcome }}' == 'success' ]] && echo '✅ Success' || echo '❌ Failed')" >> $GITHUB_ENV        
           echo "TAG_STATUS=$([[ '${{ steps.tag.outcome }}' == 'success' ]] && echo '✅ Success' || echo '❌ Failed')" >> $GITHUB_ENV        
           echo "PUSH_STATUS=$([[ '${{ steps.push.outcome }}' == 'success' ]] && echo '✅ Success' || echo '❌ Failed')" >> $GITHUB_ENV
+          echo "TASK_DEF_STATUS=$([[ '${{ steps.task-def.outcome }}' == 'success' ]] && echo '✅ Success' || echo '❌ Failed')" >> $GITHUB_ENV
+          echo "DEPLOY_STATUS=$([[ '${{ steps.deploy.outcome }}' == 'success' ]] && echo '✅ Success' || echo '❌ Failed')" >> $GITHUB_ENV
 
       - name: Send Telegram Notification
         if: always()
@@ -54,3 +78,5 @@ jobs:
             *Step name*: Build Docker image: *Status*: ${{ env.BUID_STATUS }}
             *Step name*: Tag Docker image: *Status*: ${{ env.TAG_STATUS }}
             *Step name*: Push Docker image to AWS ECR: *Status*: ${{ env.PUSH_STATUS }}
+            *Step name*: Fill in new image ID in task definition: *Status*: ${{ env.TASK_DEF_STATUS }}
+            *Step name*: Deploy Amazon ECS task definition: *Status*: ${{ env.DEPLOY_STATUS }}
